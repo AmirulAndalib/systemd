@@ -101,13 +101,6 @@ Deprecations and removals:
   and then rework cgroupsv2 support around fds, i.e. keep one fd per active
   unit around, and always operate on that, instead of cgroup fs paths.
 
-* drop support for kernels that lack ambient capabilities support (i.e. make
-  4.3 new baseline). Then drop support for "!!" modifier for ExecStart= which
-  is only supported for such old kernels.
-
-* drop support for kernels lacking memfd_create() (i.e. make 3.17 new
-  baseline), then drop all pipe() based fallbacks.
-
 * drop support for getrandom()-less kernels. (GRND_INSECURE means once kernel
   5.6 becomes our baseline). See
   https://github.com/systemd/systemd/pull/24101#issuecomment-1193966468 for
@@ -129,8 +122,7 @@ Deprecations and removals:
 
 Features:
 
-* our logging tools should look for $DEBUG_INVOCATION and consider equivalent
-  to $SYSTEMD_LOG_LEVEL=debug
+* resolved: make resolved process DNR DHCP info
 
 * Teach systemd-ssh-generator to generated an /run/issue.d/ drop-in telling
   users how to connect to the system via the AF_VSOCK, as per:
@@ -803,7 +795,7 @@ Features:
 * udevd: extend memory pressure logic: also kill any idle worker processes
 
 * udevadm: to make symlink querying with udevadm nicer:
-  - do not enable the pager for queries like 'udevadm info -q -r symlink'
+  - do not enable the pager for queries like 'udevadm info -q symlink -r'
   - add mode with newlines instead of spaces (for grep)?
 
 * SIGRTMIN+18 and memory pressure handling should still be added to: hostnamed,
