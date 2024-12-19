@@ -2399,13 +2399,13 @@ static int setup_pts(const char *dest) {
 #if HAVE_SELINUX
         if (arg_selinux_apifs_context)
                 (void) asprintf(&options,
-                                "newinstance,ptmxmode=0666,mode=620,gid=" GID_FMT ",context=\"%s\"",
+                                "newinstance,ptmxmode=0666,mode=" STRINGIFY(TTY_MODE) ",gid=" GID_FMT ",context=\"%s\"",
                                 arg_uid_shift + TTY_GID,
                                 arg_selinux_apifs_context);
         else
 #endif
                 (void) asprintf(&options,
-                                "newinstance,ptmxmode=0666,mode=620,gid=" GID_FMT,
+                                "newinstance,ptmxmode=0666,mode=" STRINGIFY(TTY_MODE) ",gid=" GID_FMT,
                                 arg_uid_shift + TTY_GID);
 
         if (!options)
@@ -2811,7 +2811,7 @@ static int drop_capabilities(uid_t uid) {
                 if (q.permitted == UINT64_MAX)
                         q.permitted = uid == 0 ? q.bounding : arg_caps_ambient;
 
-                if (q.ambient == UINT64_MAX && ambient_capabilities_supported())
+                if (q.ambient == UINT64_MAX)
                         q.ambient = arg_caps_ambient;
 
                 if (capability_quintet_mangle(&q))
@@ -2823,7 +2823,7 @@ static int drop_capabilities(uid_t uid) {
                         .effective = uid == 0 ? arg_caps_retain : 0,
                         .inheritable = uid == 0 ? arg_caps_retain : arg_caps_ambient,
                         .permitted = uid == 0 ? arg_caps_retain : arg_caps_ambient,
-                        .ambient = ambient_capabilities_supported() ? arg_caps_ambient : UINT64_MAX,
+                        .ambient = arg_caps_ambient,
                 };
 
                 /* If we're not using OCI, proceed with mangled capabilities (so we don't error out)
@@ -5739,16 +5739,6 @@ static int run_container(
         r = sd_event_loop(event);
         if (r < 0)
                 return log_error_errno(r, "Failed to run event loop: %m");
-
-        if (forward) {
-                char last_char = 0;
-
-                (void) pty_forward_get_last_char(forward, &last_char);
-                forward = pty_forward_free(forward);
-
-                if (!arg_quiet && last_char != '\n')
-                        putc('\n', stdout);
-        }
 
         /* Kill if it is not dead yet anyway */
         if (!arg_register && !arg_keep_unit && bus)
