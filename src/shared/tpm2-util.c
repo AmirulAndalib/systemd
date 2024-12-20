@@ -4015,6 +4015,9 @@ int tpm2_policy_pcr(
                         ESYS_TR_NONE,
                         NULL,
                         pcr_selection);
+        if (rc == TPM2_RC_PCR_CHANGED)
+                return log_debug_errno(SYNTHETIC_ERRNO(EUCLEAN),
+                                       "Failed to add PCR policy to TPM: %s", sym_Tss2_RC_Decode(rc));
         if (rc != TSS2_RC_SUCCESS)
                 return log_debug_errno(SYNTHETIC_ERRNO(ENOTRECOVERABLE),
                                        "Failed to add PCR policy to TPM: %s", sym_Tss2_RC_Decode(rc));
@@ -5810,6 +5813,11 @@ int tpm2_unseal(Tpm2Context *c,
                                         !!pin,
                                         (shard == 1 || !iovec_is_set(pubkey)) ? pcrlock_policy : NULL,
                                         &policy_digest);
+                        if (r == -EUCLEAN && i > 0) {
+                                log_debug("A PCR value changed during the TPM2 policy session, restarting HMAC key unsealing (%u tries left).", i);
+                                retry = true;
+                                break;
+                        }
                         if (r < 0)
                                 return r;
 
@@ -6165,7 +6173,7 @@ int tpm2_unseal_data(
 }
 #endif /* HAVE_TPM2 */
 
-int tpm2_list_devices(void) {
+int tpm2_list_devices(bool legend, bool quiet) {
 #if HAVE_TPM2
         _cleanup_(table_unrefp) Table *t = NULL;
         _cleanup_closedir_ DIR *d = NULL;
@@ -6178,6 +6186,8 @@ int tpm2_list_devices(void) {
         t = table_new("path", "device", "driver");
         if (!t)
                 return log_oom();
+
+        (void) table_set_header(t, legend);
 
         d = opendir("/sys/class/tpmrm");
         if (!d) {
@@ -6224,7 +6234,7 @@ int tpm2_list_devices(void) {
                 }
         }
 
-        if (table_isempty(t)) {
+        if (table_isempty(t) && !quiet) {
                 log_info("No suitable TPM2 devices found.");
                 return 0;
         }

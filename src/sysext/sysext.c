@@ -52,6 +52,7 @@
 #include "terminal-util.h"
 #include "user-util.h"
 #include "varlink-io.systemd.sysext.h"
+#include "varlink-util.h"
 #include "verbs.h"
 
 typedef enum MutableMode {
@@ -2030,7 +2031,7 @@ static int image_discover_and_read_metadata(
         if (!images)
                 return log_oom();
 
-        r = image_discover(image_class, arg_root, images);
+        r = image_discover(RUNTIME_SCOPE_SYSTEM, image_class, arg_root, images);
         if (r < 0)
                 return log_error_errno(r, "Failed to discover images: %m");
 
@@ -2277,7 +2278,7 @@ static int verb_list(int argc, char **argv, void *userdata) {
         if (!images)
                 return log_oom();
 
-        r = image_discover(arg_image_class, arg_root, images);
+        r = image_discover(RUNTIME_SCOPE_SYSTEM, arg_image_class, arg_root, images);
         if (r < 0)
                 return log_error_errno(r, "Failed to discover images: %m");
 
@@ -2338,7 +2339,7 @@ static int vl_method_list(sd_varlink *link, sd_json_variant *parameters, sd_varl
         if (!images)
                 return -ENOMEM;
 
-        r = image_discover(image_class, arg_root, images);
+        r = image_discover(RUNTIME_SCOPE_SYSTEM, image_class, arg_root, images);
         if (r < 0)
                 return r;
 
@@ -2568,7 +2569,7 @@ static int run(int argc, char *argv[]) {
 
                 /* Invocation as Varlink service */
 
-                r = sd_varlink_server_new(&varlink_server, SD_VARLINK_SERVER_ROOT_ONLY);
+                r = varlink_server_new(&varlink_server, SD_VARLINK_SERVER_ROOT_ONLY, NULL);
                 if (r < 0)
                         return log_error_errno(r, "Failed to allocate Varlink server: %m");
 
